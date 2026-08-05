@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Enneagram Work Styles Quiz — Donut Studios</title>
+<meta name="description" content="Find your Enneagram work style — a quick quiz for the Donut Studios team." />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="shell">
+  <div class="brandbar">
+    <svg class="mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="20" r="18" fill="#FF9F45"/>
+      <circle cx="20" cy="20" r="18" fill="url(#glazeSwirl)"/>
+      <circle cx="20" cy="20" r="7.5" fill="var(--dough)"/>
+      <circle cx="12" cy="13" r="1.6" fill="#fff"/>
+      <circle cx="27" cy="11" r="1.3" fill="#fff"/>
+      <circle cx="30" cy="22" r="1.5" fill="#4F6D7A"/>
+      <circle cx="10" cy="26" r="1.4" fill="#A8447A"/>
+      <circle cx="20" cy="31" r="1.3" fill="#fff"/>
+      <defs>
+        <linearGradient id="glazeSwirl" x1="2" y1="2" x2="36" y2="34" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#FF6F91"/>
+          <stop offset="1" stop-color="#FF9F45"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="word"><b>Donut Studios</b> &nbsp;/&nbsp; Enneagram Quiz</div>
+  </div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+/* ============================================================
+   Data — sourced from the "Enneagram Work Styles Quiz" Notion doc
+   ============================================================ */
+
+const TYPES = {
+  1: { title: "The Perfectionist", triad: "Gut", color: "var(--t1)",
+    desc: "Ones are responsible, thorough, and hard working with high standards for themselves and others. They know how to do things the right way. Their challenge is to balance their critical thinking with acceptance and appreciation, and to know when \u201cgood enough\u201d is more productive than \u201cexactly right.\u201d" },
+  2: { title: "The Giver", triad: "Heart", color: "var(--t2)",
+    desc: "Twos are positive and people-oriented. They make excellent communicators and will support the best interests of the organization. Highly empathetic, they know what other people feel and need. Their challenge is to practice good personal boundaries and to choose more carefully when and how much they help others." },
+  3: { title: "The Performer", triad: "Heart", color: "var(--t3)",
+    desc: "Threes have tremendous productivity. Enthusiastic and highly motivated, they quickly move into action to accomplish results. Their challenge is to take the time to listen to others, build good relationships, and develop more long-term strategy. They need to watch out for personal burnout due to \u201cworkaholism.\u201d" },
+  4: { title: "The Romantic", triad: "Heart", color: "var(--t4)",
+    desc: "Fours focus on authenticity, meaning, and aesthetics. They value excellence in all things and want to make a personal connection to their work and the people around them. Their challenge is to learn to tolerate the mundane aspects of work, reduce emotional reactions, and not take things too personally." },
+  5: { title: "The Observer", triad: "Head", color: "var(--t5)",
+    desc: "Fives are excellent thinkers and strategists. They seek to develop technical expertise and accumulate knowledge, and need lots of privacy and autonomy. Their challenge is to be available to other people when possible, communicate warmth, and recognize other kinds of human assets besides mental intelligence." },
+  6: { title: "The Loyal Skeptic", triad: "Head", color: "var(--t6)",
+    desc: "Sixes focus on figuring out what\u2019s going on around them to create safety and structure. They are loyal, dependable, and especially good at anticipating problems and creating solutions. Their challenge is to manage suspicion and doubt so it doesn\u2019t de-motivate themselves or other people." },
+  7: { title: "The Epicure", triad: "Head", color: "var(--t7)",
+    desc: "Sevens are quick thinking, adaptable, and positive in their outlook. Where other people see problems, they see opportunities, and they like to enjoy multiple interests and options. Their challenge is to acknowledge problems and limitations and bring their attention back to the present and the task at hand." },
+  8: { title: "The Protector", triad: "Gut", color: "var(--t8)",
+    desc: "Eights are good at taking charge of their environment. They know how to mobilize to get things done, make good leaders, and will stand up for the positions and people they care about. Their challenge is to moderate their forcefulness, become adaptable in different situations, and avoid unnecessary conflict." },
+  9: { title: "The Mediator", triad: "Gut", color: "var(--t9)",
+    desc: "Nines are steady and balanced in their approach to work and relationships. They can see all sides of an issue and bring people together in a spirit of cooperation and harmony. Their challenge is to stay focused on priorities and stick up for their own position, even if that means discomfort or conflict." },
+};
+
+const QUESTIONS = [
+  { text: "When a project doesn\u2019t go as planned, my first instinct is to\u2026", options: [
+    {t:1, x:"Figure out what went wrong and fix it the \u201cright\u201d way."},
+    {t:2, x:"Check in on how everyone else is feeling before worrying about the plan."},
+    {t:3, x:"Regroup quickly and refocus on hitting the goal anyway."},
+    {t:4, x:"Sit with what this means and how it makes me feel before reacting."},
+    {t:5, x:"Step back and analyze the situation before doing anything."},
+    {t:6, x:"Think through what could go wrong next and prepare for it."},
+    {t:7, x:"Look for a new angle or opportunity hiding in the setback."},
+    {t:8, x:"Take charge and push through the obstacle head-on."},
+    {t:9, x:"Stay calm, avoid overreacting, and let things settle naturally."},
+  ]},
+  { text: "My coworkers would probably describe me as\u2026", options: [
+    {t:1, x:"Principled and detail-oriented."},
+    {t:2, x:"Warm and generous with my time."},
+    {t:3, x:"Ambitious and results-driven."},
+    {t:4, x:"Thoughtful and a little different from the rest."},
+    {t:5, x:"Quiet, observant, and knowledgeable."},
+    {t:6, x:"Reliable and prepared for anything."},
+    {t:7, x:"Fun, spontaneous, and full of ideas."},
+    {t:8, x:"Direct and confident."},
+    {t:9, x:"Easygoing and a good mediator."},
+  ]},
+  { text: "What stresses me out most at work is\u2026", options: [
+    {t:1, x:"Sloppy work or things being done incorrectly."},
+    {t:2, x:"Feeling unappreciated or like no one needs me."},
+    {t:3, x:"Failing or looking incompetent in front of others."},
+    {t:4, x:"Feeling like just another replaceable cog in the machine."},
+    {t:5, x:"Being overwhelmed by demands on my time and energy."},
+    {t:6, x:"Uncertainty and not knowing what\u2019s coming next."},
+    {t:7, x:"Feeling trapped, bored, or stuck in routine."},
+    {t:8, x:"Being controlled or told what to do without reason."},
+    {t:9, x:"Conflict, tension, or having to pick a side."},
+  ]},
+  { text: "In a group discussion, I\u2019m most likely to\u2026", options: [
+    {t:1, x:"Point out what could be improved or done more correctly."},
+    {t:2, x:"Make sure quieter voices are heard and everyone feels included."},
+    {t:3, x:"Steer things toward a clear, actionable outcome."},
+    {t:4, x:"Share a perspective no one else has thought of."},
+    {t:5, x:"Listen more than I speak, and share only when I have something solid to add."},
+    {t:6, x:"Ask questions to stress-test the plan."},
+    {t:7, x:"Bring energy and brainstorm lots of options."},
+    {t:8, x:"Say what I think needs to be said, even if it\u2019s blunt."},
+    {t:9, x:"Try to find common ground everyone can agree on."},
+  ]},
+  { text: "My biggest motivator at work is\u2026", options: [
+    {t:1, x:"Doing things the right way and improving what\u2019s broken."},
+    {t:2, x:"Being genuinely helpful to people I care about."},
+    {t:3, x:"Achieving visible success and recognition."},
+    {t:4, x:"Creating or contributing something meaningful and true to me."},
+    {t:5, x:"Understanding things deeply and becoming competent."},
+    {t:6, x:"Building trust and security with the people around me."},
+    {t:7, x:"Keeping things interesting and having new experiences."},
+    {t:8, x:"Having control over my own decisions and protecting my team."},
+    {t:9, x:"Keeping the peace and making sure everyone\u2019s okay."},
+  ]},
+  { text: "When I make a mistake, I tend to\u2026", options: [
+    {t:1, x:"Judge myself harshly and want to correct it immediately."},
+    {t:2, x:"Worry more about how it affected others than about myself."},
+    {t:3, x:"Try to quickly move past it before anyone notices."},
+    {t:4, x:"Feel it deeply and reflect on what it says about me."},
+    {t:5, x:"Analyze it logically to understand exactly what went wrong."},
+    {t:6, x:"Replay it and worry about what might go wrong because of it."},
+    {t:7, x:"Shrug it off and look for the silver lining."},
+    {t:8, x:"Own it directly and move on without much guilt."},
+    {t:9, x:"Downplay it to avoid making things uncomfortable."},
+  ]},
+  { text: "My communication style is best described as\u2026", options: [
+    {t:1, x:"Precise and constructive, sometimes critical."},
+    {t:2, x:"Warm, encouraging, and relationship-focused."},
+    {t:3, x:"Confident, persuasive, and goal-oriented."},
+    {t:4, x:"Expressive and personal."},
+    {t:5, x:"Measured and to-the-point, only speaking when needed."},
+    {t:6, x:"Careful, especially about foreseeing problems."},
+    {t:7, x:"Upbeat, fast-paced, and full of ideas."},
+    {t:8, x:"Blunt, assertive, and no-nonsense."},
+    {t:9, x:"Calm, accommodating, and easy to talk to."},
+  ]},
+  { text: "If I imagine my ideal workday, it involves\u2026", options: [
+    {t:1, x:"Everything running smoothly and correctly, with clear standards met."},
+    {t:2, x:"Meaningful time spent supporting people I work with."},
+    {t:3, x:"Hitting a big goal and being recognized for it."},
+    {t:4, x:"Doing work that feels personally meaningful and authentic."},
+    {t:5, x:"Deep, uninterrupted focus time to think or research."},
+    {t:6, x:"A clear plan with no surprises, working alongside people I trust."},
+    {t:7, x:"Variety, novelty, and something exciting happening."},
+    {t:8, x:"Full autonomy to make decisions and get things done my way."},
+    {t:9, x:"A relaxed, low-conflict day where things just flow."},
+  ]},
+  { text: "What I value most in a team is\u2026", options: [
+    {t:1, x:"Integrity and high standards."},
+    {t:2, x:"Genuine care and support for one another."},
+    {t:3, x:"Ambition and a drive to win."},
+    {t:4, x:"Authenticity and individuality."},
+    {t:5, x:"Competence and clear thinking."},
+    {t:6, x:"Loyalty and dependability."},
+    {t:7, x:"Positivity and openness to new ideas."},
+    {t:8, x:"Strength and honesty, even when it\u2019s uncomfortable."},
+    {t:9, x:"Harmony and mutual respect."},
+  ]},
+  { text: "When things get tense, I usually\u2026", options: [
+    {t:1, x:"Get more critical of myself and others."},
+    {t:2, x:"Try harder to help or please people to smooth things over."},
+    {t:3, x:"Push even harder to succeed and prove myself."},
+    {t:4, x:"Withdraw into my own feelings and thoughts."},
+    {t:5, x:"Retreat and want space to think alone."},
+    {t:6, x:"Seek reassurance or double down on planning."},
+    {t:7, x:"Distract myself with something new or fun."},
+    {t:8, x:"Get more confrontational or controlling."},
+    {t:9, x:"Go quiet and avoid rocking the boat."},
+  ]},
+];
+
+/* ============================================================
+   State
+   ============================================================ */
+
+let respondentName = "";
+let answers = new Array(QUESTIONS.length).fill(null);
+let current = 0;
+let shuffledOptions = QUESTIONS.map(q => shuffle(q.options.slice()));
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+const app = document.getElementById("app");
+
+/* ============================================================
+   Intro screen
+   ============================================================ */
+
+function renderIntro() {
+  app.innerHTML = `
+    <div class="box-card">
+      <span class="eyebrow">Donut Studios team quiz</span>
+      <h1 style="font-size:30px; margin-bottom:14px;">What\u2019s your Enneagram work style?</h1>
+      <p style="font-size:15.5px; line-height:1.6; color:var(--box-brown-60); margin-bottom:26px;">
+        Ten quick questions about how you handle projects, feedback, and your team \u2014
+        one box at a time. At the end you\u2019ll get your likely dominant Enneagram type
+        and what it means for how you work best.
+      </p>
+      <label for="nameInput" style="font-weight:600; font-size:14.5px; display:block; margin-bottom:8px;">
+        Your name
+      </label>
+      <input id="nameInput" class="field" type="text" placeholder="e.g. Lauren Chen" autocomplete="name" />
+      <div class="nav-row" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="startBtn" disabled>Start the quiz &rarr;</button>
+      </div>
+    </div>
+  `;
+
+  const input = document.getElementById("nameInput");
+  const startBtn = document.getElementById("startBtn");
+
+  input.addEventListener("input", () => {
+    startBtn.disabled = input.value.trim().length === 0;
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && input.value.trim().length > 0) startQuiz();
+  });
+
+  startBtn.addEventListener("click", startQuiz);
+
+  function startQuiz() {
+    respondentName = input.value.trim();
+    if (!respondentName) return;
+    current = 0;
+    renderQuestion();
+  }
+}
+
+/* ============================================================
+   Quiz screen
+   ============================================================ */
+
+function renderQuestion() {
+  const q = QUESTIONS[current];
+  const opts = shuffledOptions[current];
+  const selected = answers[current];
+
+  const tracker = QUESTIONS.map((_, i) => {
+    let cls = "slot";
+    if (answers[i] !== null) cls += " filled";
+    if (i === current) cls += " current";
+    return `<div class="${cls}" aria-hidden="true"></div>`;
+  }).join("");
+
+  app.innerHTML = `
+    <div class="box-card">
+      <span class="eyebrow">Box ${current + 1} of ${QUESTIONS.length}</span>
+      <div class="box-tracker" role="progressbar" aria-valuenow="${current + 1}" aria-valuemin="1" aria-valuemax="${QUESTIONS.length}">
+        ${tracker}
+      </div>
+      <h2 style="font-size:22px; line-height:1.35; margin-bottom:4px;">${q.text}</h2>
+      <div class="options" role="radiogroup" aria-label="${q.text}">
+        ${opts.map((o, idx) => `
+          <button class="option ${selected === o.t ? "selected" : ""}" role="radio" aria-checked="${selected === o.t}" data-type="${o.t}">
+            ${o.x}
+          </button>
+        `).join("")}
+      </div>
+      <div class="nav-row">
+        <button class="btn btn-ghost" id="backBtn" ${current === 0 ? "disabled" : ""}>&larr; Back</button>
+        <button class="btn btn-primary" id="nextBtn" ${selected === null ? "disabled" : ""}>
+          ${current === QUESTIONS.length - 1 ? "See my result" : "Next"} &rarr;
+        </button>
+      </div>
+    </div>
+  `;
+
+  app.querySelectorAll(".option").forEach(btn => {
+    btn.addEventListener("click", () => {
+      answers[current] = Number(btn.dataset.type);
+      renderQuestion();
+    });
+  });
+
+  document.getElementById("backBtn").addEventListener("click", () => {
+    if (current > 0) { current -= 1; renderQuestion(); }
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", () => {
+    if (answers[current] === null) return;
+    if (current < QUESTIONS.length - 1) {
+      current += 1;
+      renderQuestion();
+    } else {
+      showResults();
+    }
+  });
+}
+
+/* ============================================================
+   Scoring
+   ============================================================ */
+
+function computeScores() {
+  const counts = {1:0,2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0};
+  answers.forEach(t => { if (t) counts[t] += 1; });
+  const total = answers.filter(a => a !== null).length || 1;
+  const percentages = {};
+  Object.keys(counts).forEach(k => {
+    percentages[k] = Math.round((counts[k] / total) * 1000) / 10; // one decimal
+  });
+  const max = Math.max(...Object.values(counts));
+  const dominantTypes = Object.keys(counts).filter(k => counts[k] === max).map(Number);
+  return { counts, percentages, dominantTypes };
+}
+
+/* ============================================================
+   Donut wheel SVG
+   ============================================================ */
+
+function buildWheel(counts, dominantTypes) {
+  const size = 260, cx = size/2, cy = size/2, rOuter = 118, rInner = 62, gapDeg = 2.2;
+  const order = [1,2,3,4,5,6,7,8,9];
+  const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
+
+  let angle = -90; // start at top
+  const segs = order.map(t => {
+    const frac = counts[t] / total;
+    const sweep = frac * 360 - gapDeg;
+    const startA = angle;
+    const endA = angle + Math.max(sweep, 0);
+    angle += frac * 360;
+    return { t, startA, endA };
+  });
+
+  function polar(r, deg) {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)];
+  }
+
+  function arcPath(startA, endA, rOut, rIn, pulled) {
+    if (endA <= startA) return "";
+    const push = pulled ? 6 : 0;
+    const mid = (startA + endA) / 2;
+    const [pushX, pushY] = pulled ? [Math.cos(mid*Math.PI/180)*push, Math.sin(mid*Math.PI/180)*push] : [0,0];
+    const large = (endA - startA) > 180 ? 1 : 0;
+    const [x1,y1] = polar(rOut, startA);
+    const [x2,y2] = polar(rOut, endA);
+    const [x3,y3] = polar(rIn, endA);
+    const [x4,y4] = polar(rIn, startA);
+    return `M ${x1+pushX} ${y1+pushY}
+      A ${rOut} ${rOut} 0 ${large} 1 ${x2+pushX} ${y2+pushY}
+      L ${x3+pushX} ${y3+pushY}
+      A ${rIn} ${rIn} 0 ${large} 0 ${x4+pushX} ${y4+pushY}
+      Z`;
+  }
+
+  const paths = segs.map(s => {
+    const pulled = dominantTypes.includes(s.t);
+    const d = arcPath(s.startA, s.endA, rOuter, rInner, pulled);
+    const dim = counts[s.t] === 0 ? 0.28 : (pulled ? 1 : 0.62);
+    return `<path d="${d}" fill="${getComputedColor(s.t)}" opacity="${dim}" stroke="var(--dough)" stroke-width="2"></path>`;
+  }).join("");
+
+  return `
+    <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Enneagram score wheel">
+      ${paths}
+      <circle cx="${cx}" cy="${cy}" r="${rInner - 4}" fill="var(--card)"></circle>
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--box-brown-60)" font-weight="600">TYPE</text>
+      <text x="${cx}" y="${cy + 20}" text-anchor="middle" font-family="Baloo 2, sans-serif" font-size="26" font-weight="700" fill="var(--box-brown)">${dominantTypes.join(" & ")}</text>
+    </svg>
+  `;
+}
+
+// Resolve CSS custom property colors to hex so they render correctly inside inline SVG fills.
+function getComputedColor(t) {
+  const varName = { 1:"--t1",2:"--t2",3:"--t3",4:"--t4",5:"--t5",6:"--t6",7:"--t7",8:"--t8",9:"--t9" }[t];
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+/* ============================================================
+   Results screen
+   ============================================================ */
+
+async function showResults() {
+  const { counts, percentages, dominantTypes } = computeScores();
+  const order = [1,2,3,4,5,6,7,8,9];
+  const primary = dominantTypes[0];
+
+  app.innerHTML = `
+    <div class="box-card">
+      <span class="eyebrow">Your result</span>
+      <div class="wheel-wrap">${buildWheel(counts, dominantTypes)}</div>
+
+      <div class="result-callout">
+        <h2>Type ${dominantTypes.join(" & ")}: ${dominantTypes.map(t => TYPES[t].title).join(" / ")}</h2>
+        ${dominantTypes.map(t => `<p style="margin-bottom:8px;">${TYPES[t].desc}</p>`).join("")}
+      </div>
+
+      ${dominantTypes.length > 1 ? `<p class="tie-note">You tied across ${dominantTypes.length} types \u2014 that\u2019s normal, and worth reading both descriptions above.</p>` : ""}
+
+      <div class="type-list">
+        ${order.map(t => `
+          <div class="type-row ${dominantTypes.includes(t) ? "dominant" : ""}">
+            <div class="type-dot" style="background:${TYPES[t].color}"></div>
+            <div class="bar-track"><div class="bar-fill" style="width:${percentages[t]}%; background:${TYPES[t].color};"></div></div>
+            <div class="pct">${percentages[t]}%</div>
+            <div class="label">Type ${t} \u2014 ${TYPES[t].title} <span class="mono" style="opacity:.7;">(${TYPES[t].triad})</span></div>
+          </div>
+        `).join("")}
+      </div>
+
+      <div class="nav-row" style="justify-content:center; margin-top:30px;">
+        <button class="btn btn-ghost" id="retakeBtn">Retake the quiz</button>
+      </div>
+      <p class="save-note" id="saveNote">Saving your result for the team\u2026</p>
+    </div>
+  `;
+
+  document.getElementById("retakeBtn").addEventListener("click", () => {
+    answers = new Array(QUESTIONS.length).fill(null);
+    shuffledOptions = QUESTIONS.map(q => shuffle(q.options.slice()));
+    current = 0;
+    renderIntro();
+  });
+
+  try {
+    const res = await fetch("/.netlify/functions/submit-result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: respondentName, percentages, counts, dominantTypes }),
+    });
+    const note = document.getElementById("saveNote");
+    if (res.ok) {
+      note.textContent = "Saved \u2014 thanks for taking the quiz!";
+    } else {
+      note.textContent = "Your result is shown above, but it couldn\u2019t be saved for the team. Feel free to share a screenshot.";
+      note.classList.add("error");
+    }
+  } catch (err) {
+    const note = document.getElementById("saveNote");
+    note.textContent = "Your result is shown above, but it couldn\u2019t be saved for the team (offline?). Feel free to share a screenshot.";
+    note.classList.add("error");
+  }
+}
+
+renderIntro();
+</script>
+
+</body>
+</html>
