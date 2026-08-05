@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Results — Donut Studios Enneagram Quiz</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="shell" style="max-width: 920px;">
+  <div class="brandbar">
+    <svg class="mark" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="20" cy="20" r="18" fill="url(#g)"/>
+      <circle cx="20" cy="20" r="7.5" fill="var(--dough)"/>
+      <defs><linearGradient id="g" x1="2" y1="2" x2="36" y2="34" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FF6F91"/><stop offset="1" stop-color="#FF9F45"/>
+      </linearGradient></defs>
+    </svg>
+    <div class="word"><b>Donut Studios</b> &nbsp;/&nbsp; Quiz Results (Team Only)</div>
+  </div>
+
+  <div id="app"></div>
+</div>
+
+<script>
+const TYPE_META = {
+  1:{title:"Perfectionist", color:"var(--t1)"}, 2:{title:"Giver", color:"var(--t2)"},
+  3:{title:"Performer", color:"var(--t3)"}, 4:{title:"Romantic", color:"var(--t4)"},
+  5:{title:"Observer", color:"var(--t5)"}, 6:{title:"Loyal Skeptic", color:"var(--t6)"},
+  7:{title:"Epicure", color:"var(--t7)"}, 8:{title:"Protector", color:"var(--t8)"},
+  9:{title:"Mediator", color:"var(--t9)"},
+};
+
+const app = document.getElementById("app");
+let sessionPassword = "";
+let cachedResults = [];
+
+function renderLogin(errorMsg) {
+  app.innerHTML = `
+    <div class="box-card" style="max-width:420px; margin:0 auto;">
+      <span class="eyebrow">Team access only</span>
+      <h1 style="font-size:24px; margin-bottom:10px;">View quiz results</h1>
+      <p style="font-size:14.5px; color:var(--box-brown-60); line-height:1.5; margin-bottom:20px;">
+        Enter the shared admin password to see everyone\u2019s submitted results.
+      </p>
+      <input id="pw" class="field" type="password" placeholder="Admin password" autocomplete="current-password" />
+      ${errorMsg ? `<p style="color:var(--glaze-pink-dk); font-size:13.5px; margin-top:10px;">${errorMsg}</p>` : ""}
+      <div class="nav-row" style="justify-content:flex-end;">
+        <button class="btn btn-primary" id="loginBtn">View results &rarr;</button>
+      </div>
+    </div>
+  `;
+  const pw = document.getElementById("pw");
+  pw.focus();
+  pw.addEventListener("keydown", e => { if (e.key === "Enter") attempt(); });
+  document.getElementById("loginBtn").addEventListener("click", attempt);
+
+  async function attempt() {
+    const val = pw.value;
+    if (!val) return;
+    sessionPassword = val;
+    await loadResults();
+  }
+}
+
+async function loadResults() {
+  app.innerHTML = `<div class="box-card"><p class="small-muted">Loading results\u2026</p></div>`;
+  try {
+    const res = await fetch("/.netlify/functions/get-results", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: sessionPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      renderLogin(data.error || "Something went wrong. Try again.");
+      return;
+    }
+    cachedResults = data.results || [];
+    renderTable();
+  } catch (err) {
+    renderLogin("Couldn\u2019t reach the server. Check your connection and try again.");
+  }
+}
+
+function renderTable() {
+  const rows = cachedResults;
+
+  app.innerHTML = `
+    <div class="box-card">
+      <div class="top-row">
+        <div>
+          <span class="eyebrow">${rows.length} submission${rows.length === 1 ? "" : "s"}</span>
+          <h1 style="font-size:24px;">Team results</h1>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" id="exportBtn" ${rows.length === 0 ? "disabled" : ""}>Export CSV</button>
+          <button class="btn btn-ghost" id="refreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      ${rows.length === 0 ? `
+        <div class="empty-state">
+          <p>No one has taken the quiz yet.</p>
+          <p class="small-muted">Results will show up here as soon as the team completes it.</p>
+        </div>
+      ` : `
+        <div class="table-scroll">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Dominant type${rows.some(r=>r.dominantTypes?.length>1) ? "(s)" : ""}</th>
+                <th>Submitted</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map((r, i) => `
+                <tr>
+                  <td><strong>${escapeHtml(r.name)}</strong></td>
+                  <td>${(r.dominantTypes||[]).map(t => `<span class="pill" style="background:${TYPE_META[t]?.color || '#999'}; margin-right:4px;">${t} \u00b7 ${TYPE_META[t]?.title || ""}</span>`).join("")}</td>
+                  <td class="small-muted">${formatDate(r.submittedAt)}</td>
+                  <td><button class="icon-btn" data-id="${r.id}" data-action="delete">Delete</button></td>
+                </tr>
+                <tr>
+                  <td colspan="4" style="padding-top:0;">
+                    <details>
+                      <summary class="small-muted" style="cursor:pointer;">Full breakdown</summary>
+                      <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+                        ${Object.entries(r.percentages||{}).sort((a,b)=>a[0]-b[0]).map(([t,p]) => `
+                          <span class="pill" style="background:${TYPE_META[t]?.color || '#999'};">T${t}: ${p}%</span>
+                        `).join("")}
+                      </div>
+                    </details>
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+  `;
+
+  document.getElementById("refreshBtn").addEventListener("click", loadResults);
+  if (rows.length > 0) {
+    document.getElementById("exportBtn").addEventListener("click", exportCsv);
+  }
+  app.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener("click", () => deleteResult(btn.dataset.id));
+  });
+}
+
+async function deleteResult(id) {
+  if (!confirm("Delete this result? This can\u2019t be undone.")) return;
+  try {
+    const res = await fetch("/.netlify/functions/delete-result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: sessionPassword, id }),
+    });
+    if (res.ok) {
+      cachedResults = cachedResults.filter(r => r.id !== id);
+      renderTable();
+    } else {
+      alert("Couldn\u2019t delete that result. Try refreshing and again.");
+    }
+  } catch (err) {
+    alert("Couldn\u2019t reach the server to delete that result.");
+  }
+}
+
+function exportCsv() {
+  const header = ["Name", "Dominant Type(s)", "Submitted At", ...[1,2,3,4,5,6,7,8,9].map(t => `Type ${t} %`)];
+  const lines = [header.join(",")];
+  cachedResults.forEach(r => {
+    const row = [
+      csvSafe(r.name),
+      csvSafe((r.dominantTypes||[]).join(" & ")),
+      csvSafe(r.submittedAt),
+      ...[1,2,3,4,5,6,7,8,9].map(t => (r.percentages?.[t] ?? "")),
+    ];
+    lines.push(row.join(","));
+  });
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `donut-enneagram-results-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvSafe(val) {
+  const s = String(val ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatDate(iso) {
+  if (!iso) return "\u2014";
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+renderLogin();
+</script>
+
+</body>
+</html>
